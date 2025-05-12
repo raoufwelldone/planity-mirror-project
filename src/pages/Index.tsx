@@ -1,10 +1,10 @@
-
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Calendar, Menu, Search, Star, X, Scissors, Users, MapPin } from "lucide-react";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import SalonSearchForm from "@/components/SalonSearchForm";
 
 const Index = () => {
   const { user } = useAuth();
@@ -212,15 +212,7 @@ const Index = () => {
               </div>
             </div>
             <div className="md:w-1/2 relative">
-              <div className="rounded-lg shadow-xl overflow-hidden bg-white p-2">
-                <img 
-                  src="https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&q=80" 
-                  alt="Salon appointment booking" 
-                  className="rounded-lg w-full h-auto"
-                />
-              </div>
-              <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-primary-dark opacity-20"></div>
-              <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-primary opacity-10"></div>
+              <SalonSearchForm />
             </div>
           </div>
         </div>

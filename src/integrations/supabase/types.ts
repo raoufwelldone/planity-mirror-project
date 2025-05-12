@@ -9,7 +9,283 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      appointments: {
+        Row: {
+          appointment_date: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          salon_id: string
+          service_id: string
+          start_time: string
+          status: string
+          stylist_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          appointment_date: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          salon_id: string
+          service_id: string
+          start_time: string
+          status?: string
+          stylist_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          appointment_date?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          salon_id?: string
+          service_id?: string
+          start_time?: string
+          status?: string
+          stylist_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_stylist_id_fkey"
+            columns: ["stylist_id"]
+            isOneToOne: false
+            referencedRelation: "stylists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      availability: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_available: boolean
+          start_time: string
+          stylist_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_available?: boolean
+          start_time: string
+          stylist_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_available?: boolean
+          start_time?: string
+          stylist_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_stylist_id_fkey"
+            columns: ["stylist_id"]
+            isOneToOne: false
+            referencedRelation: "stylists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      salons: {
+        Row: {
+          address: string
+          city: string
+          created_at: string
+          description: string | null
+          hours: string | null
+          id: string
+          image_url: string | null
+          latitude: number | null
+          longitude: number | null
+          name: string
+          phone: string | null
+          rating: number | null
+          reviews_count: number | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address: string
+          city: string
+          created_at?: string
+          description?: string | null
+          hours?: string | null
+          id?: string
+          image_url?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          phone?: string | null
+          rating?: number | null
+          reviews_count?: number | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string
+          city?: string
+          created_at?: string
+          description?: string | null
+          hours?: string | null
+          id?: string
+          image_url?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          phone?: string | null
+          rating?: number | null
+          reviews_count?: number | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration: number
+          id: string
+          name: string
+          price: number
+          salon_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration: number
+          id?: string
+          name: string
+          price: number
+          salon_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration?: number
+          id?: string
+          name?: string
+          price?: number
+          salon_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stylists: {
+        Row: {
+          bio: string | null
+          created_at: string
+          experience: string | null
+          id: string
+          image_url: string | null
+          name: string
+          salon_id: string
+          specialty: string | null
+          updated_at: string
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          experience?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          salon_id: string
+          specialty?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          experience?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          salon_id?: string
+          specialty?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stylists_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
