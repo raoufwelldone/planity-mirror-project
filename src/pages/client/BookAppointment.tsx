@@ -23,10 +23,20 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { getSalonById, getSalonServices, getSalonStylists, getAvailableTimeSlots, Salon, Service, Stylist } from "@/services/salonService";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const BookAppointment = () => {
   const { salonId } = useParams<{ salonId: string }>();
-  const { user } = useAuth();
+  const { user, login, register, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -41,6 +51,15 @@ const BookAppointment = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [stylists, setStylists] = useState<Stylist[]>([]);
   const [timeSlots, setTimeSlots] = useState<{ time: string; available: boolean }[]>([]);
+  
+  // Auth dialog states
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [authError, setAuthError] = useState('');
 
   useEffect(() => {
     const fetchSalonData = async () => {
@@ -84,23 +103,18 @@ const BookAppointment = () => {
         setTimeSlot(""); // Reset selected time slot when date or stylist changes
       } catch (error) {
         console.error("Error fetching time slots:", error);
+        toast({
+          title: "Error",
+          description: "Could not load available time slots. Please try again.",
+          variant: "destructive",
+        });
       }
     };
 
     fetchTimeSlots();
-  }, [date, stylist]);
+  }, [date, stylist, toast]);
 
   const handleBookAppointment = async () => {
-    if (!user) {
-      toast({
-        title: "Not logged in",
-        description: "You need to be logged in to book an appointment",
-        variant: "destructive",
-      });
-      navigate("/login");
-      return;
-    }
-
     if (!date || !service || !timeSlot || !stylist || !salonId) {
       toast({
         title: "Missing information",
@@ -110,6 +124,18 @@ const BookAppointment = () => {
       return;
     }
 
+    if (!user) {
+      // Open login dialog instead of redirecting
+      setLoginDialogOpen(true);
+      return;
+    }
+
+    await completeBooking();
+  };
+
+  const completeBooking = async () => {
+    if (!user || !date || !service || !timeSlot || !stylist || !salonId) return;
+    
     setIsLoading(true);
 
     try {
@@ -163,6 +189,30 @@ const BookAppointment = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    
+    try {
+      if (authMode === "login") {
+        await login(email, password, "client");
+      } else {
+        if (password !== confirmPassword) {
+          setAuthError("Passwords do not match");
+          return;
+        }
+        await register(name, email, password, "client");
+      }
+      
+      setLoginDialogOpen(false);
+      
+      // Complete the booking after successful authentication
+      await completeBooking();
+    } catch (error: any) {
+      setAuthError(error.message || `Failed to ${authMode === 'login' ? 'log in' : 'register'}`);
     }
   };
 
@@ -308,10 +358,109 @@ const BookAppointment = () => {
               >
                 {isLoading ? "Booking..." : "Book Appointment"}
               </Button>
+              
+              {!user && (
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  You'll be asked to log in or create an account to complete your booking.
+                </p>
+              )}
             </div>
           </CardFooter>
         </Card>
       </div>
+
+      {/* Authentication Dialog */}
+      <Dialog open={loginDialogOpen} onOpenChange={setLoginDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{authMode === 'login' ? 'Sign In' : 'Create Account'}</DialogTitle>
+            <DialogDescription>
+              {authMode === 'login' 
+                ? 'Sign in to complete your booking' 
+                : 'Create an account to complete your booking'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleAuthSubmit} className="space-y-4 py-4">
+            {authError && (
+              <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm">
+                {authError}
+              </div>
+            )}
+            
+            {authMode === 'register' && (
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
+            </div>
+            
+            {authMode === 'register' && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+            )}
+            
+            <DialogFooter className="flex-col gap-2 sm:flex-row pt-4">
+              <div className="flex-1">
+                <Button 
+                  type="button" 
+                  variant="link" 
+                  size="sm"
+                  onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+                >
+                  {authMode === 'login' ? "Need an account? Sign up" : "Already have an account? Sign in"}
+                </Button>
+              </div>
+              <Button type="submit" disabled={isLoading || authLoading}>
+                {isLoading || authLoading
+                  ? "Loading..." 
+                  : authMode === 'login' 
+                    ? "Sign In to Book" 
+                    : "Create Account"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

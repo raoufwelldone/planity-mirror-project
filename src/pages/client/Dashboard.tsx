@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Clock, Scissors } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Appointment {
   id: string;
@@ -25,12 +26,16 @@ interface RecentSalon {
 
 const ClientDashboard = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [recentSalons, setRecentSalons] = useState<RecentSalon[]>([]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     const fetchDashboardData = async () => {
       setLoading(true);
@@ -49,6 +54,7 @@ const ClientDashboard = () => {
           `)
           .eq('user_id', user.id)
           .gte('appointment_date', today)
+          .in('status', ['pending', 'confirmed'])
           .order('appointment_date', { ascending: true })
           .limit(3);
 
@@ -58,6 +64,7 @@ const ClientDashboard = () => {
         const { data: salons, error: salonsError } = await supabase
           .from('salons')
           .select('id, name, city, image_url')
+          .order('rating', { ascending: false })
           .limit(3);
           
         if (salonsError) throw salonsError;
@@ -66,13 +73,24 @@ const ClientDashboard = () => {
         setRecentSalons(salons as RecentSalon[]);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data. Please try again.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, [user]);
+  }, [user, toast]);
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  };
 
   return (
     <div className="container mx-auto py-10">
@@ -98,13 +116,13 @@ const ClientDashboard = () => {
                 {upcomingAppointments.map((appointment) => (
                   <div key={appointment.id} className="border-b pb-4 last:border-0 last:pb-0">
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold">{appointment.salon.name}</h3>
-                      <span className="text-primary font-medium">${appointment.service.price}</span>
+                      <h3 className="font-semibold">{appointment.salon?.name || 'Salon'}</h3>
+                      <span className="text-primary font-medium">${appointment.service?.price || 0}</span>
                     </div>
-                    <div className="text-sm text-gray-600 mb-2">{appointment.service.name}</div>
+                    <div className="text-sm text-gray-600 mb-2">{appointment.service?.name || 'Service'}</div>
                     <div className="flex items-center text-sm text-gray-500 mb-1">
                       <Calendar className="h-4 w-4 mr-2" />
-                      {new Date(appointment.appointment_date).toLocaleDateString()} at {appointment.start_time}
+                      {formatDate(appointment.appointment_date)} at {appointment.start_time}
                     </div>
                     <div className="flex items-center text-sm text-gray-500 mb-1">
                       <Scissors className="h-4 w-4 mr-2" />
@@ -112,7 +130,11 @@ const ClientDashboard = () => {
                     </div>
                     <div className="flex items-start text-sm text-gray-500">
                       <MapPin className="h-4 w-4 mr-2 mt-1" />
-                      <span>{appointment.salon.address}, {appointment.salon.city}</span>
+                      <span>
+                        {appointment.salon?.address && appointment.salon?.city 
+                          ? `${appointment.salon.address}, ${appointment.salon.city}`
+                          : 'Address not available'}
+                      </span>
                     </div>
                   </div>
                 ))}

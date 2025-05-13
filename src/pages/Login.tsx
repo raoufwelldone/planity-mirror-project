@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardFooter, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const Login = () => {
   const { login } = useAuth();
@@ -17,15 +19,14 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"client" | "partner">("client");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    
     if (!email || !password) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
+      setError("Please fill in all fields");
       return;
     }
 
@@ -38,11 +39,7 @@ const Login = () => {
         description: "Successfully logged in!",
       });
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to login",
-        variant: "destructive",
-      });
+      setError(error.message || "Failed to login");
     } finally {
       setIsLoading(false);
     }
@@ -60,6 +57,13 @@ const Login = () => {
               <TabsTrigger value="client">Client</TabsTrigger>
               <TabsTrigger value="partner">Partner</TabsTrigger>
             </TabsList>
+            
+            {error && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
