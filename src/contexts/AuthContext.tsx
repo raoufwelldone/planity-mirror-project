@@ -2,15 +2,15 @@
 import { createContext, useState, useContext, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Session, User } from "@supabase/supabase-js";
+import { Session, User as SupabaseUser } from "@supabase/supabase-js";
 
 export type UserRole = "client" | "partner";
 
-export interface User {
+export interface AppUser {
   id: string;
-  name: string;
   email: string;
   role: UserRole;
+  name: string;
   phone?: string;
   address?: string;
   city?: string;
@@ -23,12 +23,12 @@ export interface User {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: AppUser | null;
   isLoading: boolean;
   login: (email: string, password: string, role: UserRole) => Promise<void>;
   register: (name: string, email: string, password: string, role: UserRole) => Promise<void>;
   logout: () => void;
-  updateUser: (updatedUser: User) => Promise<void>;
+  updateUser: (updatedUser: AppUser) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,7 +42,7 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       (event, session) => {
         if (session && session.user) {
           // Convert Supabase user to our app's user format
-          const currentUser: User = {
+          const currentUser: AppUser = {
             id: session.user.id,
             name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || '',
             email: session.user.email || '',
@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session && session.user) {
         // Convert Supabase user to our app's user format
-        const currentUser: User = {
+        const currentUser: AppUser = {
           id: session.user.id,
           name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || '',
           email: session.user.email || '',
@@ -152,7 +152,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateUser = async (updatedUser: User) => {
+  const updateUser = async (updatedUser: AppUser) => {
     setIsLoading(true);
     try {
       // Update Supabase user metadata
