@@ -32,25 +32,42 @@ export const SalonReviews = ({ salonId }: SalonReviewsProps) => {
           rating,
           comment,
           created_at,
-          user_id,
-          profiles:user_id (
-            first_name,
-            last_name
-          )
+          user_id
         `)
         .eq("salon_id", salonId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
+      // Get user profiles separately to avoid the relation error
+      const userIds = data.map(review => review.user_id);
+      
+      // Only fetch profiles if there are reviews
+      let userProfiles: Record<string, {name: string}> = {};
+      
+      if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name")
+          .in("id", userIds);
+          
+        if (profilesError) {
+          console.error("Error fetching profiles:", profilesError);
+        } else if (profilesData) {
+          // Create a map of user_id to formatted name
+          userProfiles = profilesData.reduce((acc, profile) => {
+            acc[profile.id] = {
+              name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Anonymous'
+            };
+            return acc;
+          }, {} as Record<string, {name: string}>);
+        }
+      }
+
       // Transform the data to match our Review type
       const formattedReviews = data.map((review) => ({
         ...review,
-        user: {
-          name: review.profiles 
-            ? `${review.profiles.first_name || ''} ${review.profiles.last_name || ''}`.trim()
-            : "Anonymous"
-        }
+        user: userProfiles[review.user_id] || { name: "Anonymous" }
       }));
 
       setReviews(formattedReviews);

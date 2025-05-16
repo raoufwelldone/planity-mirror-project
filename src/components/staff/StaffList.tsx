@@ -72,14 +72,16 @@ export const StaffList = ({ salonId, editable = false }: StaffListProps) => {
 
         if (servicesError) throw servicesError;
 
+        // Cast employment_type to the expected type to ensure compatibility
         return {
           ...staff,
+          employment_type: staff.employment_type as "employee" | "independent",
           services: (servicesData || []).map((item) => item.service_id),
         };
       });
 
       const staffWithServices = await Promise.all(staffServicesPromises);
-      setStaffMembers(staffWithServices);
+      setStaffMembers(staffWithServices as StaffMember[]);
     } catch (error: any) {
       console.error("Error fetching staff:", error);
       toast({
