@@ -19,7 +19,6 @@ import ClientProfile from "./pages/client/Profile";
 import ClientAppointments from "./pages/client/Appointments";
 import PartnerDashboard from "./pages/partner/Dashboard";
 import PartnerServices from "./pages/partner/Services";
-import PartnerStaff from "./pages/partner/Staff";
 import PartnerSchedule from "./pages/partner/Schedule";
 import PartnerAppointments from "./pages/partner/Appointments";
 import PartnerProfile from "./pages/partner/Profile";
@@ -79,7 +78,6 @@ const App = () => (
           }>
             <Route path="" element={<PartnerDashboard />} />
             <Route path="services" element={<PartnerServices />} />
-            <Route path="staff" element={<PartnerStaff />} />
             <Route path="schedule" element={<PartnerSchedule />} />
             <Route path="appointments" element={<PartnerAppointments />} />
             <Route path="profile" element={<PartnerProfile />} />

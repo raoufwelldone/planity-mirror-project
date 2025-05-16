@@ -56,7 +56,10 @@ const PartnerProfile = () => {
           setPhone(existingSalons.phone || "");
           setAddress(existingSalons.address || "");
           setCity(existingSalons.city || "");
+          setState(state || "");
+          setZip(zip || "");
           setWebsite(existingSalons.website || "");
+          setBusinessType(businessType || "");
           setDescription(existingSalons.description || "");
           setHours(existingSalons.hours || "");
           
@@ -79,7 +82,7 @@ const PartnerProfile = () => {
             .from("salons")
             .insert({
               id: user.id,
-              name: user.name,
+              name: user.name || "My Salon",
               address: "",
               city: "",
             })
@@ -89,6 +92,10 @@ const PartnerProfile = () => {
           
           if (newSalon && newSalon.length > 0) {
             setSalonId(newSalon[0].id);
+            toast({
+              title: "Salon profile created",
+              description: "Your salon profile has been created successfully"
+            });
           }
         }
       } catch (error: any) {
@@ -111,10 +118,35 @@ const PartnerProfile = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user || !salonId) return;
+    if (!user) return;
     
     setIsSaving(true);
     try {
+      // First ensure we have a salon ID
+      let currentSalonId = salonId;
+      
+      if (!currentSalonId) {
+        // Create a new salon if we don't have one yet
+        const { data: newSalon, error: createError } = await supabase
+          .from("salons")
+          .insert({
+            id: user.id,
+            name: name || "My Salon",
+            address: address || "",
+            city: city || "",
+          })
+          .select();
+          
+        if (createError) throw createError;
+        
+        if (newSalon && newSalon.length > 0) {
+          currentSalonId = newSalon[0].id;
+          setSalonId(currentSalonId);
+        } else {
+          throw new Error("Failed to create salon profile");
+        }
+      }
+      
       // Update salon data
       const { error: salonError } = await supabase
         .from("salons")
@@ -123,11 +155,12 @@ const PartnerProfile = () => {
           phone,
           address,
           city,
+          state,
           website,
           description,
           hours,
         })
-        .eq("id", salonId);
+        .eq("id", currentSalonId);
 
       if (salonError) throw salonError;
       
