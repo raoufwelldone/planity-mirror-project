@@ -118,7 +118,7 @@ export const getSalonByUserId = async (userId: string): Promise<Salon | null> =>
   try {
     console.log("Getting salon by user ID:", userId);
     
-    // First, check if the user has a salon profile linked
+    // First check if user has a salon_id in their profile
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('salon_id')
@@ -130,38 +130,44 @@ export const getSalonByUserId = async (userId: string): Promise<Salon | null> =>
       throw profileError;
     }
     
-    // If the user has a salon_id in their profile, fetch that salon using direct query
-    // instead of calling getSalonById to avoid potential recursive issues
+    // If profile has a salon_id, fetch that salon directly
     if (profileData?.salon_id) {
       const { data: salonData, error: salonError } = await supabase
         .from('salons')
         .select('*')
         .eq('id', profileData.salon_id)
-        .single();
+        .maybeSingle();
         
       if (salonError) {
         console.error("Error fetching salon by profile salon_id:", salonError);
         throw salonError;
       }
       
-      console.log("Salon found via profile relation:", salonData?.name);
-      return salonData as Salon;
+      if (salonData) {
+        console.log("Salon found via profile relation:", salonData.name);
+        return salonData as Salon;
+      }
     }
     
-    // Direct lookup in salons table
-    const { data, error } = await supabase
+    // If no salon found via profile, check direct user_id relationship in salons table
+    const { data: directSalonData, error: directError } = await supabase
       .from('salons')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (error) {
-      console.error("Error in getSalonByUserId:", error);
-      throw error;
+    if (directError) {
+      console.error("Error in direct salon lookup:", directError);
+      throw directError;
     }
 
-    console.log("Salon for user:", data?.name || "No salon found");
-    return data as Salon | null;
+    if (directSalonData) {
+      console.log("Salon found via direct relationship:", directSalonData.name);
+      return directSalonData as Salon;
+    }
+    
+    console.log("No salon found for user:", userId);
+    return null;
   } catch (error) {
     console.error('Error fetching salon by user ID:', error);
     return null;
