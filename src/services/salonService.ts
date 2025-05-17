@@ -114,14 +114,33 @@ export const getSalonById = async (id: string) => {
   }
 };
 
-export const getSalonByUserId = async (userId: string) => {
+export const getSalonByUserId = async (userId: string): Promise<Salon | null> => {
   try {
     console.log("Getting salon by user ID:", userId);
+    
+    // First, check if the user has a salon profile linked
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('salon_id')
+      .eq('id', userId)
+      .maybeSingle();
+    
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
+      throw profileError;
+    }
+    
+    // If the user has a salon_id in their profile, fetch that salon
+    if (profileData?.salon_id) {
+      return getSalonById(profileData.salon_id);
+    }
+    
+    // Direct lookup in salons table
     const { data, error } = await supabase
       .from('salons')
       .select('*')
       .eq('user_id', userId)
-      .maybeSingle(); // Changed from single() to maybeSingle()
+      .maybeSingle();
 
     if (error) {
       console.error("Error in getSalonByUserId:", error);
