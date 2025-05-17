@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -28,7 +28,8 @@ const queryClient = new QueryClient();
 
 // Protected route component
 const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: "client" | "partner" }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, session } = useAuth();
+  const location = useLocation();
   
   if (isLoading) {
     return (
@@ -39,9 +40,22 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
   }
   
   // Redirect if not authenticated or wrong role
-  if (!user || (requiredRole && user.role !== requiredRole)) {
+  if (!user || !session || (requiredRole && user.role !== requiredRole)) {
+    console.log("Access denied:", { 
+      authenticated: !!user && !!session,
+      userRole: user?.role,
+      requiredRole,
+      path: location.pathname
+    });
+    
     return <Navigate to="/login" replace />;
   }
+  
+  console.log("Access granted:", {
+    user: user?.id,
+    role: user?.role,
+    path: location.pathname
+  });
   
   return <>{children}</>;
 };

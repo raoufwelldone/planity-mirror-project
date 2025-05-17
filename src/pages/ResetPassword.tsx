@@ -1,6 +1,7 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,18 +9,46 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardFooter, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const ResetPassword = () => {
   const { resetPassword } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [hasSession, setHasSession] = useState(false);
+
+  // Check if session exists on component mount
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      console.log("ResetPassword - Session check:", data?.session?.user?.id);
+      setHasSession(!!data.session);
+      
+      if (!data.session) {
+        setError("Invalid or expired password reset link. Please request a new password reset.");
+        toast({
+          title: "Session Error",
+          description: "Invalid or expired password reset link. Please request a new password reset.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    checkSession();
+  }, [toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    
+    if (!hasSession) {
+      setError("Invalid or expired password reset link. Please request a new password reset.");
+      return;
+    }
     
     if (!password || !confirmPassword) {
       setError("Please fill in all fields");
@@ -39,8 +68,13 @@ const ResetPassword = () => {
     setIsLoading(true);
     try {
       await resetPassword(password);
+      toast({
+        title: "Success",
+        description: "Your password has been reset successfully.",
+      });
       navigate("/login");
     } catch (error: any) {
+      console.error("Password reset error:", error);
       setError(error.message || "Failed to reset password");
     } finally {
       setIsLoading(false);
@@ -70,6 +104,7 @@ const ResetPassword = () => {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={!hasSession || isLoading}
               />
             </div>
             
@@ -81,10 +116,15 @@ const ResetPassword = () => {
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={!hasSession || isLoading}
               />
             </div>
             
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={!hasSession || isLoading}
+            >
               {isLoading ? "Updating..." : "Update Password"}
             </Button>
           </form>

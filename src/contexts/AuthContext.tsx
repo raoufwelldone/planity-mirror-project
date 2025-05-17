@@ -79,9 +79,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();  // Changed from single() to maybeSingle()
 
-      if (error) {
+      if (error && error.code !== 'PGRST116') {
         console.error("Error fetching profile:", error);
         return;
       }
@@ -107,12 +107,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
+        console.log("Auth state changed:", event, newSession?.user?.id);
+        
         // Only update state with synchronous operations
         setSession(newSession);
-        setUser(mapUser(newSession));
+        const mappedUser = mapUser(newSession);
+        setUser(mappedUser);
         
         // Then, if we have a session, load additional user data asynchronously
         if (newSession?.user) {
+          // Using setTimeout to avoid deadlocks in auth state changes
           setTimeout(() => {
             loadUserProfile(newSession.user.id);
           }, 0);
@@ -124,8 +128,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const initializeAuth = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log("Initial session check:", currentSession?.user?.id);
+        
         setSession(currentSession);
-        setUser(mapUser(currentSession));
+        const mappedUser = mapUser(currentSession);
+        setUser(mappedUser);
         
         if (currentSession?.user) {
           await loadUserProfile(currentSession.user.id);
@@ -156,12 +163,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw error;
       }
 
+      console.log("Login successful:", data?.user?.id);
+      
       // Update user role if needed
       if (data.user && role) {
         await supabase.auth.updateUser({
           data: { role }
         });
       }
+
+      // No need to set user/session here, the onAuthStateChange listener will handle it
+      
     } catch (error: any) {
       console.error("Login failed", error);
       toast({
@@ -242,13 +254,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const resetPassword = async (newPassword: string) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ 
+      console.log("Attempting to reset password");
+      const { data, error } = await supabase.auth.updateUser({ 
         password: newPassword 
       });
 
       if (error) {
+        console.error("Password reset error:", error);
         throw error;
       }
+      
+      console.log("Password reset successful:", data);
 
       toast({
         title: "Password updated",

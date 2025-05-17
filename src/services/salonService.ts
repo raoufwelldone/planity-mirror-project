@@ -49,6 +49,7 @@ export interface Availability {
 
 export const getSalons = async (filters?: { location?: string; service?: string }) => {
   try {
+    console.log("Getting salons with filters:", filters);
     let query = supabase.from('salons').select('*');
 
     if (filters?.location) {
@@ -62,20 +63,28 @@ export const getSalons = async (filters?: { location?: string; service?: string 
         .select('salon_id')
         .ilike('name', `%${filters.service}%`);
 
-      if (serviceError) throw serviceError;
+      if (serviceError) {
+        console.error("Error fetching service IDs:", serviceError);
+        throw serviceError;
+      }
 
       if (serviceIds && serviceIds.length > 0) {
         query = query.in('id', serviceIds.map(s => s.salon_id));
       } else {
         // No salons offer this service
+        console.log("No salons found offering service:", filters.service);
         return [];
       }
     }
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error in getSalons:", error);
+      throw error;
+    }
     
+    console.log(`Found ${data?.length || 0} salons`);
     return data as Salon[];
   } catch (error) {
     console.error('Error fetching salons:', error);
@@ -85,17 +94,44 @@ export const getSalons = async (filters?: { location?: string; service?: string 
 
 export const getSalonById = async (id: string) => {
   try {
+    console.log("Getting salon by ID:", id);
     const { data, error } = await supabase
       .from('salons')
       .select('*')
       .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error in getSalonById:", error);
+      throw error;
+    }
     
+    console.log("Salon found:", data?.name);
     return data as Salon;
   } catch (error) {
     console.error('Error fetching salon:', error);
+    return null;
+  }
+};
+
+export const getSalonByUserId = async (userId: string) => {
+  try {
+    console.log("Getting salon by user ID:", userId);
+    const { data, error } = await supabase
+      .from('salons')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle(); // Changed from single() to maybeSingle()
+
+    if (error) {
+      console.error("Error in getSalonByUserId:", error);
+      throw error;
+    }
+
+    console.log("Salon for user:", data?.name || "No salon found");
+    return data as Salon | null;
+  } catch (error) {
+    console.error('Error fetching salon by user ID:', error);
     return null;
   }
 };
