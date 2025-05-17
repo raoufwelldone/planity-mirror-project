@@ -7,6 +7,8 @@ export interface Salon {
   description: string;
   address: string;
   city: string;
+  state: string;
+  zip: string;
   latitude: number;
   longitude: number;
   phone: string;

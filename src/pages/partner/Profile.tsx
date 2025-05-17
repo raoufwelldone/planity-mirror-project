@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -109,10 +110,8 @@ const PartnerProfile = () => {
           setPhone(existingSalons.phone || "");
           setAddress(existingSalons.address || "");
           setCity(existingSalons.city || "");
-          // Since state and zip aren't in the salon table, we keep them from user data
-          // or initialize them as empty strings
-          setState(user?.state || "");
-          setZip(user?.zip || "");
+          setState(existingSalons.state || "");
+          setZip(existingSalons.zip || "");
           setWebsite(existingSalons.website || "");
           setBusinessType(businessType || "");
           setDescription(existingSalons.description || "");
@@ -128,6 +127,8 @@ const PartnerProfile = () => {
               phone: existingSalons.phone || user.phone,
               address: existingSalons.address || user.address,
               city: existingSalons.city || user.city,
+              state: existingSalons.state || "",
+              zip: existingSalons.zip || "",
               website: existingSalons.website || user.website,
               description: existingSalons.description || user.description,
             });
@@ -141,6 +142,8 @@ const PartnerProfile = () => {
               name: user.name || "My Salon",
               address: "",
               city: "",
+              state: "",
+              zip: ""
             })
             .select();
 
@@ -190,6 +193,8 @@ const PartnerProfile = () => {
             name: name || "My Salon",
             address: address || "",
             city: city || "",
+            state: state || "",
+            zip: zip || "",
             hours: stringifyHours(businessHours),
           })
           .select();
@@ -204,7 +209,7 @@ const PartnerProfile = () => {
         }
       }
       
-      // Update salon data - don't include state and zip as they aren't in the salon table
+      // Update salon data - include state and zip in the salon table
       const { error: salonError } = await supabase
         .from("salons")
         .update({
@@ -212,6 +217,8 @@ const PartnerProfile = () => {
           phone,
           address,
           city,
+          state,
+          zip,
           website,
           description,
           hours: stringifyHours(businessHours),
@@ -220,7 +227,7 @@ const PartnerProfile = () => {
 
       if (salonError) throw salonError;
       
-      // Update user data - include state and zip here instead
+      // Update user data
       const updatedUser = {
         ...user,
         name,

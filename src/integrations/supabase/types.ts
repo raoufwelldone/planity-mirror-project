@@ -240,8 +240,10 @@ export type Database = {
           phone: string | null
           rating: number | null
           reviews_count: number | null
+          state: string | null
           updated_at: string
           website: string | null
+          zip: string | null
         }
         Insert: {
           address: string
@@ -257,8 +259,10 @@ export type Database = {
           phone?: string | null
           rating?: number | null
           reviews_count?: number | null
+          state?: string | null
           updated_at?: string
           website?: string | null
+          zip?: string | null
         }
         Update: {
           address?: string
@@ -274,8 +278,10 @@ export type Database = {
           phone?: string | null
           rating?: number | null
           reviews_count?: number | null
+          state?: string | null
           updated_at?: string
           website?: string | null
+          zip?: string | null
         }
         Relationships: []
       }
