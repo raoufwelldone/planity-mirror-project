@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Salon {
@@ -163,7 +162,24 @@ export const getSalonByUserId = async (userId: string): Promise<Salon | null> =>
 
     if (directSalonData) {
       console.log("Salon found via direct relationship:", directSalonData.name);
-      return directSalonData as Salon;
+      // Return as a plain object to avoid type recursion issues
+      return {
+        id: directSalonData.id,
+        name: directSalonData.name,
+        description: directSalonData.description || "",
+        address: directSalonData.address,
+        city: directSalonData.city,
+        state: directSalonData.state || "",
+        zip: directSalonData.zip || "",
+        latitude: directSalonData.latitude || 0,
+        longitude: directSalonData.longitude || 0,
+        phone: directSalonData.phone || "",
+        website: directSalonData.website || "",
+        hours: directSalonData.hours || "",
+        rating: directSalonData.rating || 0,
+        reviews_count: directSalonData.reviews_count || 0,
+        image_url: directSalonData.image_url || ""
+      };
     }
     
     console.log("No salon found for user:", userId);
