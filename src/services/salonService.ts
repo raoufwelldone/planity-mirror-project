@@ -130,9 +130,22 @@ export const getSalonByUserId = async (userId: string): Promise<Salon | null> =>
       throw profileError;
     }
     
-    // If the user has a salon_id in their profile, fetch that salon
+    // If the user has a salon_id in their profile, fetch that salon using direct query
+    // instead of calling getSalonById to avoid potential recursive issues
     if (profileData?.salon_id) {
-      return getSalonById(profileData.salon_id);
+      const { data: salonData, error: salonError } = await supabase
+        .from('salons')
+        .select('*')
+        .eq('id', profileData.salon_id)
+        .single();
+        
+      if (salonError) {
+        console.error("Error fetching salon by profile salon_id:", salonError);
+        throw salonError;
+      }
+      
+      console.log("Salon found via profile relation:", salonData?.name);
+      return salonData as Salon;
     }
     
     // Direct lookup in salons table
