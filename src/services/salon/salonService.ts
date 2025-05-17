@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Salon {
@@ -122,13 +123,14 @@ export const getSalonByUserId = async (userId: string): Promise<Salon | null> =>
     }
     
     // If no salon found via profile, check direct user_id relationship in salons table
+    // Using maybeSingle() instead of single() to avoid errors when no record is found
     const { data: directSalonData, error: directError } = await supabase
       .from('salons')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
-    if (directError && directError.code !== 'PGRST116') {
+    if (directError) {
       console.error("Error in direct salon lookup:", directError);
       throw directError;
     }
