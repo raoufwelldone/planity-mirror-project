@@ -11,6 +11,42 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SalonGallery } from "@/components/salon/SalonGallery";
 import { ServiceList } from "@/components/services/ServiceList";
 import { StaffList } from "@/components/staff/StaffList";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// Helper types for business hours
+type DayOfWeek = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
+type BusinessHour = {
+  day: DayOfWeek;
+  isOpen: boolean;
+  openTime: string;
+  closeTime: string;
+};
+
+const defaultBusinessHours: BusinessHour[] = [
+  { day: "Monday", isOpen: true, openTime: "09:00", closeTime: "17:00" },
+  { day: "Tuesday", isOpen: true, openTime: "09:00", closeTime: "17:00" },
+  { day: "Wednesday", isOpen: true, openTime: "09:00", closeTime: "17:00" },
+  { day: "Thursday", isOpen: true, openTime: "09:00", closeTime: "17:00" },
+  { day: "Friday", isOpen: true, openTime: "09:00", closeTime: "17:00" },
+  { day: "Saturday", isOpen: false, openTime: "09:00", closeTime: "17:00" },
+  { day: "Sunday", isOpen: false, openTime: "09:00", closeTime: "17:00" },
+];
+
+// Generate time options
+const generateTimeOptions = () => {
+  const options = [];
+  for (let hour = 0; hour < 24; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      const h = hour.toString().padStart(2, '0');
+      const m = minute.toString().padStart(2, '0');
+      options.push(`${h}:${m}`);
+    }
+  }
+  return options;
+};
+
+const timeOptions = generateTimeOptions();
 
 const PartnerProfile = () => {
   const { user, updateUser } = useAuth();
@@ -31,7 +67,24 @@ const PartnerProfile = () => {
   const [website, setWebsite] = useState(user?.website || "");
   const [businessType, setBusinessType] = useState(user?.businessType || "");
   const [description, setDescription] = useState(user?.description || "");
-  const [hours, setHours] = useState(user?.hours || "");
+  const [businessHours, setBusinessHours] = useState<BusinessHour[]>(defaultBusinessHours);
+
+  // Parse stored hours string to BusinessHour[] if available
+  const parseHoursString = (hoursString?: string) => {
+    if (!hoursString) return defaultBusinessHours;
+    
+    try {
+      return JSON.parse(hoursString) as BusinessHour[];
+    } catch (e) {
+      console.error("Error parsing hours string:", e);
+      return defaultBusinessHours;
+    }
+  };
+  
+  // Stringify BusinessHour[] to store in database
+  const stringifyHours = (hours: BusinessHour[]) => {
+    return JSON.stringify(hours);
+  };
 
   useEffect(() => {
     const fetchSalonData = async () => {
@@ -56,12 +109,14 @@ const PartnerProfile = () => {
           setPhone(existingSalons.phone || "");
           setAddress(existingSalons.address || "");
           setCity(existingSalons.city || "");
-          setState(state || "");
-          setZip(zip || "");
+          setState(existingSalons.state || "");
+          setZip(existingSalons.zip || "");
           setWebsite(existingSalons.website || "");
           setBusinessType(businessType || "");
           setDescription(existingSalons.description || "");
-          setHours(existingSalons.hours || "");
+          
+          // Parse business hours if available
+          setBusinessHours(parseHoursString(existingSalons.hours));
           
           // Update user state to keep everything in sync
           if (user) {
@@ -73,7 +128,6 @@ const PartnerProfile = () => {
               city: existingSalons.city || user.city,
               website: existingSalons.website || user.website,
               description: existingSalons.description || user.description,
-              hours: existingSalons.hours || user.hours
             });
           }
         } else {
@@ -134,6 +188,7 @@ const PartnerProfile = () => {
             name: name || "My Salon",
             address: address || "",
             city: city || "",
+            hours: stringifyHours(businessHours),
           })
           .select();
           
@@ -158,7 +213,7 @@ const PartnerProfile = () => {
           state,
           website,
           description,
-          hours,
+          hours: stringifyHours(businessHours),
         })
         .eq("id", currentSalonId);
 
@@ -177,7 +232,6 @@ const PartnerProfile = () => {
         website,
         businessType,
         description,
-        hours
       };
       
       await updateUser(updatedUser);
@@ -196,6 +250,13 @@ const PartnerProfile = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Handle business hour changes
+  const handleHourChange = (index: number, field: keyof BusinessHour, value: any) => {
+    const updatedHours = [...businessHours];
+    updatedHours[index] = { ...updatedHours[index], [field]: value };
+    setBusinessHours(updatedHours);
   };
 
   if (!user || isLoading) {
@@ -326,15 +387,63 @@ const PartnerProfile = () => {
                     />
                   </div>
                   
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="hours">Business Hours</Label>
-                    <Textarea 
-                      id="hours"
-                      value={hours}
-                      onChange={(e) => setHours(e.target.value)}
-                      rows={4}
-                      placeholder="Monday: 9AM-6PM, Tuesday: 9AM-6PM, etc."
-                    />
+                  <div className="space-y-4 md:col-span-2">
+                    <Label>Business Hours</Label>
+                    
+                    {businessHours.map((dayHours, index) => (
+                      <div key={dayHours.day} className="grid grid-cols-12 gap-4 items-center">
+                        <div className="col-span-3 sm:col-span-2 flex items-center space-x-2">
+                          <Checkbox 
+                            id={`day-${dayHours.day}`} 
+                            checked={dayHours.isOpen}
+                            onCheckedChange={(checked) => 
+                              handleHourChange(index, 'isOpen', checked === true)
+                            }
+                          />
+                          <Label htmlFor={`day-${dayHours.day}`}>{dayHours.day}</Label>
+                        </div>
+                        
+                        <div className="col-span-4 sm:col-span-5">
+                          <Select
+                            value={dayHours.openTime}
+                            onValueChange={(value) => handleHourChange(index, 'openTime', value)}
+                            disabled={!dayHours.isOpen}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Opening Time" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {timeOptions.map((time) => (
+                                <SelectItem key={`open-${dayHours.day}-${time}`} value={time}>
+                                  {time}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="col-span-1 sm:col-span-1 text-center">to</div>
+                        
+                        <div className="col-span-4 sm:col-span-4">
+                          <Select
+                            value={dayHours.closeTime}
+                            onValueChange={(value) => handleHourChange(index, 'closeTime', value)}
+                            disabled={!dayHours.isOpen}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Closing Time" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {timeOptions.map((time) => (
+                                <SelectItem key={`close-${dayHours.day}-${time}`} value={time}>
+                                  {time}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
                 

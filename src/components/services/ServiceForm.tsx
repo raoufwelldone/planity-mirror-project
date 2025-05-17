@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ServiceGroupForm } from "./ServiceGroupForm";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface ServiceGroup {
   id: string;
@@ -26,13 +26,16 @@ interface ServiceFormProps {
     duration: number;
     group_id?: string | null;
   };
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export const ServiceForm = ({ salonId, onSuccess, initialData }: ServiceFormProps) => {
+export const ServiceForm = ({ salonId, onSuccess, initialData, isOpen, onClose }: ServiceFormProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [serviceGroups, setServiceGroups] = useState<ServiceGroup[]>([]);
   const [activeTab, setActiveTab] = useState<string>("service");
+  const [dialogOpen, setDialogOpen] = useState(isOpen || false);
   
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
@@ -41,6 +44,19 @@ export const ServiceForm = ({ salonId, onSuccess, initialData }: ServiceFormProp
     duration: initialData?.duration || 30,
     group_id: initialData?.group_id || "",
   });
+
+  // Handle dialog state synced with prop
+  useEffect(() => {
+    if (isOpen !== undefined) {
+      setDialogOpen(isOpen);
+    }
+  }, [isOpen]);
+
+  // Handle dialog close
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+    if (onClose) onClose();
+  };
 
   // Fetch service groups when component mounts or when a new group is added
   const fetchServiceGroups = async () => {
@@ -119,6 +135,16 @@ export const ServiceForm = ({ salonId, onSuccess, initialData }: ServiceFormProp
           : "The service has been created successfully",
       });
 
+      // Reset form and close dialog
+      setFormData({
+        name: "",
+        description: "",
+        price: 0,
+        duration: 30,
+        group_id: "",
+      });
+      
+      handleDialogClose();
       onSuccess();
     } catch (error: any) {
       console.error("Error saving service:", error);
@@ -141,7 +167,7 @@ export const ServiceForm = ({ salonId, onSuccess, initialData }: ServiceFormProp
     });
   };
 
-  return (
+  const serviceForm = (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid grid-cols-2 w-full">
         <TabsTrigger value="service">Service Details</TabsTrigger>
@@ -262,4 +288,21 @@ export const ServiceForm = ({ salonId, onSuccess, initialData }: ServiceFormProp
       </TabsContent>
     </Tabs>
   );
+
+  // If dialog mode is enabled, wrap the form in a dialog
+  if (isOpen !== undefined) {
+    return (
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>{initialData?.id ? "Edit Service" : "Add Service"}</DialogTitle>
+          </DialogHeader>
+          {serviceForm}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Otherwise return just the form
+  return serviceForm;
 };

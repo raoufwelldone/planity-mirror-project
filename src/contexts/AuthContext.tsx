@@ -24,11 +24,14 @@ export interface AppUser {
 
 interface AuthContextType {
   user: AppUser | null;
+  session: Session | null;
   isLoading: boolean;
   login: (email: string, password: string, role: UserRole) => Promise<void>;
   register: (name: string, email: string, password: string, role: UserRole) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateUser: (updatedUser: AppUser) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,42 +46,98 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+
+  // Function to convert Supabase user to app user format
+  const mapUser = (session: Session | null): AppUser | null => {
+    if (!session || !session.user) return null;
+    
+    const { user: supabaseUser } = session;
+    return {
+      id: supabaseUser.id,
+      name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || '',
+      email: supabaseUser.email || '',
+      role: supabaseUser.user_metadata?.role || 'client',
+      phone: supabaseUser.user_metadata?.phone || '',
+      address: supabaseUser.user_metadata?.address || '',
+      city: supabaseUser.user_metadata?.city || '',
+      state: supabaseUser.user_metadata?.state || '',
+      zip: supabaseUser.user_metadata?.zip || '',
+      website: supabaseUser.user_metadata?.website || '',
+      description: supabaseUser.user_metadata?.description || '',
+      businessType: supabaseUser.user_metadata?.businessType || '',
+      hours: supabaseUser.user_metadata?.hours || '',
+    };
+  };
+
+  // Load user profile from profiles table
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching profile:", error);
+        return;
+      }
+
+      // If we have data from the profile, update the user state
+      if (data) {
+        setUser(prevUser => {
+          if (!prevUser) return null;
+          
+          return {
+            ...prevUser,
+            phone: data.phone || prevUser.phone,
+            // Add other profile fields here
+          };
+        });
+      }
+    } catch (error) {
+      console.error("Error in loadUserProfile:", error);
+    }
+  };
 
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (session && session.user) {
-          // Convert Supabase user to our app's user format
-          const currentUser: AppUser = {
-            id: session.user.id,
-            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || '',
-            email: session.user.email || '',
-            role: session.user.user_metadata?.role || 'client',
-          };
-          setUser(currentUser);
-        } else {
-          setUser(null);
+      (event, newSession) => {
+        // Only update state with synchronous operations
+        setSession(newSession);
+        setUser(mapUser(newSession));
+        
+        // Then, if we have a session, load additional user data asynchronously
+        if (newSession?.user) {
+          setTimeout(() => {
+            loadUserProfile(newSession.user.id);
+          }, 0);
         }
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session && session.user) {
-        // Convert Supabase user to our app's user format
-        const currentUser: AppUser = {
-          id: session.user.id,
-          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || '',
-          email: session.user.email || '',
-          role: session.user.user_metadata?.role || 'client',
-        };
-        setUser(currentUser);
+    // Initial session check
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        setSession(currentSession);
+        setUser(mapUser(currentSession));
+        
+        if (currentSession?.user) {
+          await loadUserProfile(currentSession.user.id);
+        }
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    });
+    };
+
+    initializeAuth();
 
     return () => {
       subscription.unsubscribe();
@@ -152,6 +211,62 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const forgotPassword = async (email: string) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Password reset email sent",
+        description: "Check your email for the password reset link",
+      });
+    } catch (error: any) {
+      console.error("Password reset request failed", error);
+      toast({
+        title: "Password reset failed",
+        description: error.message || "Failed to send password reset email",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetPassword = async (newPassword: string) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ 
+        password: newPassword 
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Password updated",
+        description: "Your password has been updated successfully",
+      });
+    } catch (error: any) {
+      console.error("Password update failed", error);
+      toast({
+        title: "Password update failed",
+        description: error.message || "Failed to update password",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const updateUser = async (updatedUser: AppUser) => {
     setIsLoading(true);
     try {
@@ -160,6 +275,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         data: {
           name: updatedUser.name,
           role: updatedUser.role,
+          phone: updatedUser.phone,
+          address: updatedUser.address,
+          city: updatedUser.city,
+          state: updatedUser.state,
+          zip: updatedUser.zip,
+          website: updatedUser.website,
+          description: updatedUser.description,
+          businessType: updatedUser.businessType,
+          hours: updatedUser.hours,
         }
       });
 
@@ -173,7 +297,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             id: user.id,
             first_name: updatedUser.name.split(' ')[0],
             last_name: updatedUser.name.split(' ').slice(1).join(' '),
-            phone: updatedUser.phone
+            phone: updatedUser.phone,
+            // Add other profile fields here
           });
 
         if (profileError) throw profileError;
@@ -204,6 +329,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       
       setUser(null);
+      setSession(null);
+      
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
     } catch (error: any) {
       console.error("Logout failed", error);
       toast({
@@ -216,11 +347,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const value = {
     user,
+    session,
     isLoading,
     login,
     register,
     logout,
     updateUser,
+    forgotPassword,
+    resetPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

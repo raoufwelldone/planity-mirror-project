@@ -10,9 +10,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const Login = () => {
-  const { login } = useAuth();
+  const { login, forgotPassword } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
@@ -20,6 +21,9 @@ const Login = () => {
   const [role, setRole] = useState<"client" | "partner">("client");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [isForgotPasswordLoading, setIsForgotPasswordLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +46,36 @@ const Login = () => {
       setError(error.message || "Failed to login");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotPasswordEmail) {
+      toast({
+        title: "Error",
+        description: "Please enter your email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsForgotPasswordLoading(true);
+    try {
+      await forgotPassword(forgotPasswordEmail);
+      setForgotPasswordOpen(false);
+      toast({
+        title: "Success",
+        description: "Password reset email has been sent!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send password reset email",
+        variant: "destructive",
+      });
+    } finally {
+      setIsForgotPasswordLoading(false);
     }
   };
 
@@ -88,6 +122,17 @@ const Login = () => {
                 />
               </div>
               
+              <div className="flex justify-end">
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto font-normal text-sm text-blue-600" 
+                  type="button"
+                  onClick={() => setForgotPasswordOpen(true)}
+                >
+                  Forgot password?
+                </Button>
+              </div>
+              
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Signing in..." : "Sign In"}
               </Button>
@@ -104,6 +149,40 @@ const Login = () => {
           </p>
         </CardFooter>
       </Card>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Enter your email address and we'll send you a link to reset your password.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotPassword}>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="forgotPasswordEmail">Email</Label>
+                <Input
+                  id="forgotPasswordEmail"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={forgotPasswordEmail}
+                  onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setForgotPasswordOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isForgotPasswordLoading}>
+                {isForgotPasswordLoading ? "Sending..." : "Send Reset Link"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
