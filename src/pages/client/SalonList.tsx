@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Search, MapPin, Star, Scissors, List, Map as MapIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Map from "@/components/Map";
-import { getSalons, Salon } from "@/services/salonService";
+import { getSalons, Salon } from "@/services/salon";
 
 const SalonList = () => {
   const [searchQuery, setSearchQuery] = useState("");

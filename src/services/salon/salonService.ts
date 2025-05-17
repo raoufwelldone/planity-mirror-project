@@ -86,7 +86,8 @@ export const getSalonById = async (id: string) => {
   }
 };
 
-export const getSalonByUserId = async (userId: string) => {
+// Fixed version of getSalonByUserId to avoid type instantiation issues
+export const getSalonByUserId = async (userId: string): Promise<Salon | null> => {
   try {
     console.log("Getting salon by user ID:", userId);
     
@@ -117,23 +118,7 @@ export const getSalonByUserId = async (userId: string) => {
       
       if (salonData) {
         console.log("Salon found via profile relation:", salonData.name);
-        return {
-          id: salonData.id,
-          name: salonData.name,
-          description: salonData.description || "",
-          address: salonData.address,
-          city: salonData.city,
-          state: salonData.state || "",
-          zip: salonData.zip || "",
-          latitude: salonData.latitude || 0,
-          longitude: salonData.longitude || 0,
-          phone: salonData.phone || "",
-          website: salonData.website || "",
-          hours: salonData.hours || "",
-          rating: salonData.rating || 0,
-          reviews_count: salonData.reviews_count || 0,
-          image_url: salonData.image_url || ""
-        };
+        return salonData as Salon;
       }
     }
     
@@ -151,23 +136,7 @@ export const getSalonByUserId = async (userId: string) => {
 
     if (directSalonData) {
       console.log("Salon found via direct relationship:", directSalonData.name);
-      return {
-        id: directSalonData.id,
-        name: directSalonData.name,
-        description: directSalonData.description || "",
-        address: directSalonData.address,
-        city: directSalonData.city,
-        state: directSalonData.state || "",
-        zip: directSalonData.zip || "",
-        latitude: directSalonData.latitude || 0,
-        longitude: directSalonData.longitude || 0,
-        phone: directSalonData.phone || "",
-        website: directSalonData.website || "",
-        hours: directSalonData.hours || "",
-        rating: directSalonData.rating || 0,
-        reviews_count: directSalonData.reviews_count || 0,
-        image_url: directSalonData.image_url || ""
-      };
+      return directSalonData as Salon;
     }
     
     console.log("No salon found for user:", userId);

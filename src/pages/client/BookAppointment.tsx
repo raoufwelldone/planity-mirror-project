@@ -21,7 +21,10 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { getSalonById, getSalonServices, getSalonStylists, getAvailableTimeSlots, Salon, Service, Stylist } from "@/services/salonService";
+import { getSalonById, Salon } from "@/services/salon";
+import { getSalonServices, Service } from "@/services/salon";
+import { getSalonStylists, Stylist } from "@/services/salon";
+import { getAvailableTimeSlots } from "@/services/salon";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
