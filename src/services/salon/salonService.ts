@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Salon {
@@ -86,7 +85,7 @@ export const getSalonById = async (id: string) => {
   }
 };
 
-// Fixed version of getSalonByUserId to avoid type instantiation issues
+// Completely rewritten getSalonByUserId to avoid type instantiation issues
 export const getSalonByUserId = async (userId: string): Promise<Salon | null> => {
   try {
     console.log("Getting salon by user ID:", userId);
@@ -96,9 +95,9 @@ export const getSalonByUserId = async (userId: string): Promise<Salon | null> =>
       .from('profiles')
       .select('salon_id')
       .eq('id', userId)
-      .maybeSingle();
+      .single();
     
-    if (profileError) {
+    if (profileError && profileError.code !== 'PGRST116') {
       console.error("Error fetching profile:", profileError);
       throw profileError;
     }
@@ -109,7 +108,7 @@ export const getSalonByUserId = async (userId: string): Promise<Salon | null> =>
         .from('salons')
         .select('*')
         .eq('id', profileData.salon_id)
-        .maybeSingle();
+        .single();
         
       if (salonError) {
         console.error("Error fetching salon by profile salon_id:", salonError);
@@ -127,9 +126,9 @@ export const getSalonByUserId = async (userId: string): Promise<Salon | null> =>
       .from('salons')
       .select('*')
       .eq('user_id', userId)
-      .maybeSingle();
+      .single();
 
-    if (directError) {
+    if (directError && directError.code !== 'PGRST116') {
       console.error("Error in direct salon lookup:", directError);
       throw directError;
     }
