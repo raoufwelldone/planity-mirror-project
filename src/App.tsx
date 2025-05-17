@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "./contexts/AuthContext";
+import { useAuth, AuthProvider } from "./contexts/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
@@ -47,49 +47,51 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          
-          {/* Client Routes */}
-          <Route path="/client" element={
-            <ProtectedRoute requiredRole="client">
-              <ClientLayout />
-            </ProtectedRoute>
-          }>
-            <Route path="" element={<ClientDashboard />} />
-            <Route path="salons" element={<SalonList />} />
-            <Route path="salons/:id" element={<SalonDetail />} />
-            <Route path="book/:salonId" element={<BookAppointment />} />
-            <Route path="appointments" element={<ClientAppointments />} />
-            <Route path="profile" element={<ClientProfile />} />
-          </Route>
-          
-          {/* Partner Routes */}
-          <Route path="/partner" element={
-            <ProtectedRoute requiredRole="partner">
-              <PartnerLayout />
-            </ProtectedRoute>
-          }>
-            <Route path="" element={<PartnerDashboard />} />
-            <Route path="services" element={<PartnerServices />} />
-            <Route path="schedule" element={<PartnerSchedule />} />
-            <Route path="appointments" element={<PartnerAppointments />} />
-            <Route path="profile" element={<PartnerProfile />} />
-          </Route>
-          
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            
+            {/* Client Routes */}
+            <Route path="/client" element={
+              <ProtectedRoute requiredRole="client">
+                <ClientLayout />
+              </ProtectedRoute>
+            }>
+              <Route path="" element={<ClientDashboard />} />
+              <Route path="salons" element={<SalonList />} />
+              <Route path="salons/:id" element={<SalonDetail />} />
+              <Route path="book/:salonId" element={<BookAppointment />} />
+              <Route path="appointments" element={<ClientAppointments />} />
+              <Route path="profile" element={<ClientProfile />} />
+            </Route>
+            
+            {/* Partner Routes */}
+            <Route path="/partner" element={
+              <ProtectedRoute requiredRole="partner">
+                <PartnerLayout />
+              </ProtectedRoute>
+            }>
+              <Route path="" element={<PartnerDashboard />} />
+              <Route path="services" element={<PartnerServices />} />
+              <Route path="schedule" element={<PartnerSchedule />} />
+              <Route path="appointments" element={<PartnerAppointments />} />
+              <Route path="profile" element={<PartnerProfile />} />
+            </Route>
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </AuthProvider>
 );
 
 export default App;

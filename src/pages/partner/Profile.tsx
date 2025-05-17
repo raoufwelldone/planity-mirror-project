@@ -109,8 +109,10 @@ const PartnerProfile = () => {
           setPhone(existingSalons.phone || "");
           setAddress(existingSalons.address || "");
           setCity(existingSalons.city || "");
-          setState(existingSalons.state || "");
-          setZip(existingSalons.zip || "");
+          // Since state and zip aren't in the salon table, we keep them from user data
+          // or initialize them as empty strings
+          setState(user?.state || "");
+          setZip(user?.zip || "");
           setWebsite(existingSalons.website || "");
           setBusinessType(businessType || "");
           setDescription(existingSalons.description || "");
@@ -202,7 +204,7 @@ const PartnerProfile = () => {
         }
       }
       
-      // Update salon data
+      // Update salon data - don't include state and zip as they aren't in the salon table
       const { error: salonError } = await supabase
         .from("salons")
         .update({
@@ -210,7 +212,6 @@ const PartnerProfile = () => {
           phone,
           address,
           city,
-          state,
           website,
           description,
           hours: stringifyHours(businessHours),
@@ -219,7 +220,7 @@ const PartnerProfile = () => {
 
       if (salonError) throw salonError;
       
-      // Update user data
+      // Update user data - include state and zip here instead
       const updatedUser = {
         ...user,
         name,
