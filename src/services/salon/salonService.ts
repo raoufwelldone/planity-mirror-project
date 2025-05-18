@@ -85,57 +85,57 @@ export const getSalonById = async (id: string) => {
   }
 };
 
-// Fixed function to resolve type instantiation error
+// Completely refactored to fix the type instantiation error
 export const getSalonByUserId = async (userId: string): Promise<Salon | null> => {
+  if (!userId) {
+    console.log("No user ID provided");
+    return null;
+  }
+
   try {
     console.log("Getting salon by user ID:", userId);
     
-    // Step 1: Check if user has a salon_id in their profile - use maybeSingle to avoid excessive type instantiation
-    const profileResult = await supabase
-      .from('profiles')
+    // First check if user has a salon_id in their profile
+    const profileQuery = await supabase.from('profiles')
       .select('salon_id')
-      .eq('id', userId)
-      .maybeSingle();
+      .eq('id', userId);
     
-    if (profileResult.error && profileResult.error.code !== 'PGRST116') {
-      console.error("Error fetching profile:", profileResult.error);
-      throw profileResult.error;
+    if (profileQuery.error) {
+      console.error("Error fetching profile:", profileQuery.error);
+      throw profileQuery.error;
     }
     
-    // Step 2: If profile has a salon_id, fetch that salon directly
-    if (profileResult.data?.salon_id) {
-      const salonResult = await supabase
-        .from('salons')
+    // If profile has a salon_id that's not null, fetch that salon
+    if (profileQuery.data?.[0]?.salon_id) {
+      const salonId = profileQuery.data[0].salon_id;
+      const salonQuery = await supabase.from('salons')
         .select('*')
-        .eq('id', profileResult.data.salon_id)
-        .maybeSingle();
-        
-      if (salonResult.error) {
-        console.error("Error fetching salon by profile salon_id:", salonResult.error);
-        throw salonResult.error;
+        .eq('id', salonId);
+      
+      if (salonQuery.error) {
+        console.error("Error fetching salon by profile salon_id:", salonQuery.error);
+        throw salonQuery.error;
       }
       
-      if (salonResult.data) {
-        console.log("Salon found via profile relation:", salonResult.data.name);
-        return salonResult.data as Salon;
+      if (salonQuery.data?.[0]) {
+        console.log("Salon found via profile relation:", salonQuery.data[0].name);
+        return salonQuery.data[0] as Salon;
       }
     }
     
-    // Step 3: Check direct user_id relationship - use maybeSingle to avoid excessive type instantiation
-    const directResult = await supabase
-      .from('salons')
+    // Otherwise check direct user_id relationship
+    const directQuery = await supabase.from('salons')
       .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (directResult.error) {
-      console.error("Error in direct salon lookup:", directResult.error);
-      throw directResult.error;
+      .eq('user_id', userId);
+    
+    if (directQuery.error) {
+      console.error("Error in direct salon lookup:", directQuery.error);
+      throw directQuery.error;
     }
-
-    if (directResult.data) {
-      console.log("Salon found via direct relationship:", directResult.data.name);
-      return directResult.data as Salon;
+    
+    if (directQuery.data?.[0]) {
+      console.log("Salon found via direct relationship:", directQuery.data[0].name);
+      return directQuery.data[0] as Salon;
     }
     
     console.log("No salon found for user:", userId);
