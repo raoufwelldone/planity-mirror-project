@@ -11,25 +11,25 @@ export const getUserSalon = async (userId: string): Promise<Salon | null> => {
   try {
     console.log("Getting salon by user ID:", userId);
     
-    // First try direct relationship - simplified query approach
+    // First try direct relationship with explicit typing
     try {
-      const { data: salons, error: directError } = await supabase
+      const { data, error } = await supabase
         .from('salons')
         .select('*')
         .eq('user_id', userId);
       
-      if (directError) {
-        console.error("Error in direct salon lookup:", directError);
-      } else if (salons && salons.length > 0) {
-        console.log("Salon found via direct relationship:", salons[0].name);
-        return salons[0] as Salon;
+      if (error) {
+        console.error("Error in direct salon lookup:", error);
+      } else if (data && data.length > 0) {
+        console.log("Salon found via direct relationship:", data[0].name);
+        return data[0] as Salon;
       }
     } catch (directError) {
       console.error("Exception in direct salon lookup:", directError);
       // Continue to next method
     }
     
-    // If no direct relationship, check profile - simplified query approach
+    // If no direct relationship, check profile with explicit typing
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
