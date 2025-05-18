@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -100,13 +99,13 @@ const PartnerProfile = () => {
           .eq("id", user.id)
           .maybeSingle();
 
-        if (salonError) throw salonError;
+        if (salonError && salonError.code !== 'PGRST116') throw salonError;
 
         if (existingSalons) {
           // Salon exists - load data
           setSalonId(existingSalons.id);
           
-          setName(existingSalons.name || user.name);
+          setName(existingSalons.name || user.name || "");
           setPhone(existingSalons.phone || "");
           setAddress(existingSalons.address || "");
           setCity(existingSalons.city || "");
@@ -123,14 +122,14 @@ const PartnerProfile = () => {
           if (user) {
             updateUser({
               ...user,
-              name: existingSalons.name || user.name,
-              phone: existingSalons.phone || user.phone,
-              address: existingSalons.address || user.address,
-              city: existingSalons.city || user.city,
+              name: existingSalons.name || user.name || "",
+              phone: existingSalons.phone || user.phone || "",
+              address: existingSalons.address || user.address || "",
+              city: existingSalons.city || user.city || "",
               state: existingSalons.state || "",
               zip: existingSalons.zip || "",
-              website: existingSalons.website || user.website,
-              description: existingSalons.description || user.description,
+              website: existingSalons.website || user.website || "",
+              description: existingSalons.description || user.description || "",
             });
           }
         } else {
@@ -143,7 +142,8 @@ const PartnerProfile = () => {
               address: "",
               city: "",
               state: "",
-              zip: ""
+              zip: "",
+              user_id: user.id // Add user_id field to create proper relationship
             })
             .select();
 
@@ -196,6 +196,7 @@ const PartnerProfile = () => {
             state: state || "",
             zip: zip || "",
             hours: stringifyHours(businessHours),
+            user_id: user.id // Add user_id field to create proper relationship
           })
           .select();
           
@@ -222,6 +223,7 @@ const PartnerProfile = () => {
           website,
           description,
           hours: stringifyHours(businessHours),
+          user_id: user.id // Ensure user_id is set for the relationship
         })
         .eq("id", currentSalonId);
 
@@ -283,8 +285,6 @@ const PartnerProfile = () => {
         <TabsList className="mb-8">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="gallery">Gallery</TabsTrigger>
-          <TabsTrigger value="services">Services</TabsTrigger>
-          <TabsTrigger value="staff">Staff</TabsTrigger>
         </TabsList>
         
         <TabsContent value="profile">
@@ -471,40 +471,6 @@ const PartnerProfile = () => {
             <CardContent>
               {salonId ? (
                 <SalonGallery salonId={salonId} editable />
-              ) : (
-                <div className="text-center py-8">
-                  Please save your salon profile first.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="services">
-          <Card>
-            <CardHeader>
-              <CardTitle>Services</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {salonId ? (
-                <ServiceList salonId={salonId} editable />
-              ) : (
-                <div className="text-center py-8">
-                  Please save your salon profile first.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="staff">
-          <Card>
-            <CardHeader>
-              <CardTitle>Staff Members</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {salonId ? (
-                <StaffList salonId={salonId} editable />
               ) : (
                 <div className="text-center py-8">
                   Please save your salon profile first.
