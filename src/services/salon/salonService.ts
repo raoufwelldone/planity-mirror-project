@@ -102,9 +102,10 @@ export const getSalonByUserId = async (userId: string): Promise<Salon | null> =>
       .from('salons')
       .select('*')
       .eq('user_id', userId)
-      .maybeSingle();
+      .single();
     
-    if (directError) {
+    if (directError && directError.code !== 'PGRST116') {
+      // PGRST116 is "no rows returned" error, which is expected if no salon is found
       console.error("Error in direct salon lookup:", directError);
       throw directError;
     }
@@ -120,9 +121,9 @@ export const getSalonByUserId = async (userId: string): Promise<Salon | null> =>
       .from('profiles')
       .select('salon_id')
       .eq('id', userId)
-      .maybeSingle();
+      .single();
     
-    if (profileError) {
+    if (profileError && profileError.code !== 'PGRST116') {
       console.error("Error fetching profile:", profileError);
       throw profileError;
     }
@@ -134,9 +135,9 @@ export const getSalonByUserId = async (userId: string): Promise<Salon | null> =>
         .from('salons')
         .select('*')
         .eq('id', salonId)
-        .maybeSingle();
+        .single();
       
-      if (salonError) {
+      if (salonError && salonError.code !== 'PGRST116') {
         console.error("Error fetching salon by profile salon_id:", salonError);
         throw salonError;
       }
