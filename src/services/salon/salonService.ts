@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Salon {
@@ -16,6 +17,7 @@ export interface Salon {
   rating: number;
   reviews_count: number;
   image_url: string;
+  user_id?: string; // Added user_id field
 }
 
 export const getSalons = async (filters?: { location?: string; service?: string }) => {
@@ -29,7 +31,7 @@ export const getSalons = async (filters?: { location?: string; service?: string 
 
     if (filters?.service) {
       // First get salon IDs that offer this service
-      const { data: serviceIds, error: serviceError } = await supabase
+      const { data: serviceData, error: serviceError } = await supabase
         .from('services')
         .select('salon_id')
         .ilike('name', `%${filters.service}%`);
@@ -39,8 +41,9 @@ export const getSalons = async (filters?: { location?: string; service?: string 
         throw serviceError;
       }
 
-      if (serviceIds && serviceIds.length > 0) {
-        query = query.in('id', serviceIds.map(s => s.salon_id));
+      if (serviceData && serviceData.length > 0) {
+        const salonIds = serviceData.map(s => s.salon_id);
+        query = query.in('id', salonIds);
       } else {
         // No salons offer this service
         console.log("No salons found offering service:", filters.service);
@@ -85,8 +88,7 @@ export const getSalonById = async (id: string) => {
   }
 };
 
-// Completely refactored to fix the type instantiation error
-export const getSalonByUserId = async (userId: string): Promise<Salon | null> => {
+export const getSalonByUserId = async (userId: string) => {
   if (!userId) {
     console.log("No user ID provided");
     return null;
@@ -96,46 +98,49 @@ export const getSalonByUserId = async (userId: string): Promise<Salon | null> =>
     console.log("Getting salon by user ID:", userId);
     
     // First check if user has a salon_id in their profile
-    const profileQuery = await supabase.from('profiles')
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
       .select('salon_id')
       .eq('id', userId);
     
-    if (profileQuery.error) {
-      console.error("Error fetching profile:", profileQuery.error);
-      throw profileQuery.error;
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
+      throw profileError;
     }
     
-    // If profile has a salon_id that's not null, fetch that salon
-    if (profileQuery.data?.[0]?.salon_id) {
-      const salonId = profileQuery.data[0].salon_id;
-      const salonQuery = await supabase.from('salons')
+    // Check if profile has a salon_id
+    if (profileData && profileData.length > 0 && profileData[0].salon_id) {
+      const salonId = profileData[0].salon_id;
+      const { data: salonData, error: salonError } = await supabase
+        .from('salons')
         .select('*')
         .eq('id', salonId);
       
-      if (salonQuery.error) {
-        console.error("Error fetching salon by profile salon_id:", salonQuery.error);
-        throw salonQuery.error;
+      if (salonError) {
+        console.error("Error fetching salon by profile salon_id:", salonError);
+        throw salonError;
       }
       
-      if (salonQuery.data?.[0]) {
-        console.log("Salon found via profile relation:", salonQuery.data[0].name);
-        return salonQuery.data[0] as Salon;
+      if (salonData && salonData.length > 0) {
+        console.log("Salon found via profile relation:", salonData[0].name);
+        return salonData[0] as Salon;
       }
     }
     
-    // Otherwise check direct user_id relationship
-    const directQuery = await supabase.from('salons')
+    // Check direct user_id relationship
+    const { data: directData, error: directError } = await supabase
+      .from('salons')
       .select('*')
       .eq('user_id', userId);
     
-    if (directQuery.error) {
-      console.error("Error in direct salon lookup:", directQuery.error);
-      throw directQuery.error;
+    if (directError) {
+      console.error("Error in direct salon lookup:", directError);
+      throw directError;
     }
     
-    if (directQuery.data?.[0]) {
-      console.log("Salon found via direct relationship:", directQuery.data[0].name);
-      return directQuery.data[0] as Salon;
+    if (directData && directData.length > 0) {
+      console.log("Salon found via direct relationship:", directData[0].name);
+      return directData[0] as Salon;
     }
     
     console.log("No salon found for user:", userId);
@@ -143,5 +148,69 @@ export const getSalonByUserId = async (userId: string): Promise<Salon | null> =>
   } catch (error) {
     console.error('Error fetching salon by user ID:', error);
     return null;
+  }
+};
+
+export const createSalon = async (salonData: Omit<Salon, 'id' | 'rating' | 'reviews_count'> & { user_id: string }) => {
+  try {
+    const { data, error } = await supabase
+      .from('salons')
+      .insert({
+        ...salonData,
+        rating: 0,
+        reviews_count: 0
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating salon:", error);
+      throw error;
+    }
+
+    return data as Salon;
+  } catch (error) {
+    console.error('Error creating salon:', error);
+    throw error;
+  }
+};
+
+export const updateSalon = async (id: string, salonData: Partial<Salon>) => {
+  try {
+    const { data, error } = await supabase
+      .from('salons')
+      .update(salonData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating salon:", error);
+      throw error;
+    }
+
+    return data as Salon;
+  } catch (error) {
+    console.error('Error updating salon:', error);
+    throw error;
+  }
+};
+
+export const deleteSalon = async (id: string) => {
+  try {
+    const { error } = await supabase
+      .from('salons')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error deleting salon:", error);
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting salon:', error);
+    throw error;
   }
 };

@@ -26,11 +26,12 @@ import PartnerProfile from "./pages/partner/Profile";
 
 const queryClient = new QueryClient();
 
-// Protected route component
+// Protected route component with improved authentication handling
 const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: "client" | "partner" }) => {
   const { user, isLoading, session } = useAuth();
   const location = useLocation();
   
+  // Show loading indicator while auth state is being determined
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -40,37 +41,78 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
   }
   
   // Redirect if not authenticated or wrong role
-  if (!user || !session || (requiredRole && user.role !== requiredRole)) {
-    console.log("Access denied:", { 
-      authenticated: !!user && !!session,
-      userRole: user?.role,
+  if (!user || !session) {
+    console.log("Access denied: Not authenticated", {
+      path: location.pathname
+    });
+    
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
+  
+  if (requiredRole && user.role !== requiredRole) {
+    console.log("Access denied: Wrong role", {
+      userRole: user.role,
       requiredRole,
       path: location.pathname
     });
     
-    return <Navigate to="/login" replace />;
+    // Redirect to appropriate dashboard based on user role
+    const redirectPath = user.role === "client" ? "/client" : "/partner";
+    return <Navigate to={redirectPath} replace />;
   }
   
   console.log("Access granted:", {
-    user: user?.id,
-    role: user?.role,
+    user: user.id,
+    role: user.role,
     path: location.pathname
   });
   
   return <>{children}</>;
 };
 
+// Public route component that redirects authenticated users to their dashboard
+const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading, session } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  // If user is authenticated, redirect to their dashboard
+  if (user && session) {
+    const redirectPath = user.role === "client" ? "/client" : "/partner";
+    return <Navigate to={redirectPath} replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 const App = () => (
-  <AuthProvider>
-    <QueryClientProvider client={queryClient}>
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            
+            <Route path="/login" element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            } />
+            
+            <Route path="/register" element={
+              <PublicRoute>
+                <Register />
+              </PublicRoute>
+            } />
+            
             <Route path="/reset-password" element={<ResetPassword />} />
             
             {/* Client Routes */}
@@ -104,8 +146,8 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
-    </QueryClientProvider>
-  </AuthProvider>
+    </AuthProvider>
+  </QueryClientProvider>
 );
 
 export default App;

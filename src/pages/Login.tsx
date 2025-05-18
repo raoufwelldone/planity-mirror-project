@@ -29,18 +29,10 @@ const Login = () => {
 
   // Check if user is already logged in and redirect if necessary
   useEffect(() => {
-    const checkAuthAndRedirect = async () => {
-      // Check if we have a session before redirecting
-      if (user && session) {
-        console.log("User already logged in:", user.id, "role:", user.role);
-        const redirectPath = user.role === "client" ? "/client" : "/partner";
-        navigate(redirectPath, { replace: true });
-      }
-    };
-
-    // Only check for authentication if not loading
-    if (!authLoading) {
-      checkAuthAndRedirect();
+    if (!authLoading && user && session) {
+      console.log("User already logged in:", user.id, "role:", user.role);
+      const redirectPath = user.role === "client" ? "/client" : "/partner";
+      navigate(redirectPath, { replace: true });
     }
   }, [user, session, navigate, authLoading]);
 
@@ -56,7 +48,7 @@ const Login = () => {
     setIsLoading(true);
     try {
       await login(email, password, role);
-      // Don't navigate here, let the useEffect handle it
+      // Navigation will be handled by the useEffect above
       toast({
         title: "Success",
         description: "Successfully logged in!",
@@ -115,7 +107,14 @@ const Login = () => {
 
   // If user is already authenticated, don't show the login form
   if (user && session) {
-    return null; // This will be replaced by the redirect in useEffect
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg mb-4">Already logged in. Redirecting to dashboard...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
+        </div>
+      </div>
+    );
   }
 
   return (
