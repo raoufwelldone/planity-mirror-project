@@ -1,8 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import type { Salon } from "./salonService";
+import type { Salon } from "./models";
 
-// Extract the complex user-salon relationship logic to its own file
 export const getUserSalon = async (userId: string): Promise<Salon | null> => {
   if (!userId) {
     console.log("No user ID provided");
@@ -14,45 +13,52 @@ export const getUserSalon = async (userId: string): Promise<Salon | null> => {
     
     // First try direct relationship
     try {
-      const { data } = await supabase
+      // Using maybeSingle() instead of limit(1) to fix type instantiation issue
+      const { data: directSalon, error: directError } = await supabase
         .from('salons')
         .select('*')
         .eq('user_id', userId)
-        .limit(1);
+        .maybeSingle();
       
-      if (data && data.length > 0) {
-        console.log("Salon found via direct relationship:", data[0].name);
-        return data[0] as Salon;
+      if (directError) {
+        console.error("Error in direct salon lookup:", directError);
+      } else if (directSalon) {
+        console.log("Salon found via direct relationship:", directSalon.name);
+        return directSalon as Salon;
       }
     } catch (directError) {
-      console.error("Error in direct salon lookup:", directError);
+      console.error("Exception in direct salon lookup:", directError);
       // Continue to next method
     }
     
     // If no direct relationship, check profile
     try {
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('salon_id')
         .eq('id', userId)
-        .limit(1);
+        .maybeSingle();
       
-      if (profileData && profileData.length > 0 && profileData[0]?.salon_id) {
-        const salonId = profileData[0].salon_id;
+      if (profileError) {
+        console.error("Error fetching profile:", profileError);
+      } else if (profileData?.salon_id) {
+        const salonId = profileData.salon_id;
         
-        const { data: salonData } = await supabase
+        const { data: salonData, error: salonError } = await supabase
           .from('salons')
           .select('*')
           .eq('id', salonId)
-          .limit(1);
+          .maybeSingle();
         
-        if (salonData && salonData.length > 0) {
-          console.log("Salon found via profile relation:", salonData[0].name);
-          return salonData[0] as Salon;
+        if (salonError) {
+          console.error("Error fetching salon by profile salon_id:", salonError);
+        } else if (salonData) {
+          console.log("Salon found via profile relation:", salonData.name);
+          return salonData as Salon;
         }
       }
     } catch (profileError) {
-      console.error("Error fetching profile or salon:", profileError);
+      console.error("Exception fetching profile or salon:", profileError);
     }
     
     console.log("No salon found for user:", userId);
@@ -61,4 +67,8 @@ export const getUserSalon = async (userId: string): Promise<Salon | null> => {
     console.error('Error fetching salon by user ID:', error);
     return null;
   }
+};
+
+export const getSalonByUserId = async (userId: string): Promise<Salon | null> => {
+  return getUserSalon(userId);
 };
